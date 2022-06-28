@@ -1,0 +1,14 @@
+#include <iostream>
+using namespace std;
+
+typedef struct Node {
+    char ch;
+    struct Node *lchild, *rchild;
+} Node;
+
+
+int main() {
+    
+    return 0;
+}
+

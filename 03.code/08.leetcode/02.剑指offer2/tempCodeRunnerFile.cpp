@@ -1,0 +1,1 @@
+cout << "now : " << now->val << endl;

@@ -1,0 +1,10 @@
+mailcap
+mailcap.order
+manpath.config
+mime.types
+mke2fs.conf
+modprobe.d
+modules
+modules-load.d
+motd
+mtab

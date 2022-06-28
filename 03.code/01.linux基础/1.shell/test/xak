@@ -1,0 +1,10 @@
+mysql
+nanorc
+netplan
+network
+networkd-dispatcher
+NetworkManager
+networks
+newt
+nsswitch.conf
+ntp.conf

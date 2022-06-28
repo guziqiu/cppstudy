@@ -1,0 +1,80 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include <sys/time.h>
+#include <sys/file.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <pthread.h>
+//socket
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+ 
+
+ 
+struct Msg{
+    char name[20];
+    char msg[1024];
+    pthread_mutex_t mutex;
+    pthread_cond_t cond;
+};
+
+struct Msg *shar_memory = NULL;
+
+int main(int argc, char **argv) {
+        
+    int opt, shmid;//.,共享内存id
+    char name[20] = {0};
+    while ((opt = getopt(argc, argv, "n:")) != -1) {
+        switch (opt) {
+        case 'n':
+            strcpy(name, optarg);
+            break;
+        default:
+            fprintf(stderr, "Usage : %s -n name\n", argv[0]);
+            exit(1);
+        }
+    }
+
+    key_t key = ftok(".", 202101);
+    if ((shmid = shmget(key, sizeof(struct Msg), IPC_CREAT | 0666)) < 0) {
+        perror("shmget");
+        exit(1);
+    }
+
+    if ((shar_memory = (struct Msg *)shmat(shmid, NULL, 0)) == (struct Msg *)-1) {
+        perror("shmat");
+        exit(1);
+    }
+
+    while (1) {
+        char msg[1024] = {0};
+        scanf("%[^\n]s", msg);
+        getchar();//吃掉缓冲区的回车键
+        if (!strlen(msg)) continue;//字符串为空
+        while (1) {
+            if (!strlen(shar_memory->msg)) {
+                pthread_mutex_lock(&shar_memory->mutex);
+            }
+        }
+        //pthread_mutex_lock(&shar_memory->mutex);
+        printf("Sending : %s...\n", msg);
+        strcpy(shar_memory->msg, msg);
+        strcpy(shar_memory->name, name);
+        pthread_cond_signal(&shar_memory->cond);
+        pthread_mutex_unlock(&shar_memory->mutex);
+        printf("Client signaled the cond\n");
+    }
+
+
+
+    return 0;
+}
+
