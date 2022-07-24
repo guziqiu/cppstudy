@@ -34,14 +34,62 @@ void example2() {
     int a = 2;
     decltype(i) b = 2; // b 是 const int&
 }
+void example3() {
+ int i = 0;
+	auto *a = &i;
+	cout << a << endl;
+	cout << *a << endl;
 
+	auto &b = i;
+	cout << b << endl;
+}
+
+void example4() {
+	int a = 0, b = 0;
+	decltype(a + b) c =  11; // c 是 int, 因为(a + b)返回一个右值
+	cout << c << endl;
+
+	decltype(a += b) d = c; // d 是 int, 因为(a + b)返回一个左值
+
+	d = 20;
+	cout << "c = " << c << endl;
+}
+
+// template<typename T, typename U>
+// return_value add(T t, U u) { // t 和 u 类不确定，无法推导出return_value类型
+// 	return t + u;
+// }
+
+
+// template<typename T, typename U>
+// decltype(t + u) add(T t, U u) { // t 和 u 尚未定义 error编译报错
+// 	return t + u;
+// }
+
+template<typename T, typename U>
+auto add(T t, U u) -> decltype(t + u) {
+	return t + u;
+}
+
+
+void example5() {
+	cout << add(1, 2) << endl;
+	cout << add((string)"asd", (string)"asd") << endl;
+}
 
 
 int main() {
+	example5();
+	return 0;
 
-    
+   example4();
+//    cout << i << endl;
 
+const int &i = 1;
+int a = 2;
+decltype(i) b = 2;
 
+cout << i << endl;
 
     return 0;
 }
