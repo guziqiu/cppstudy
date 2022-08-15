@@ -82,4 +82,64 @@ void *thread_run(void *arg)
 }
 
 
+extern int sockfd;
+extern char *data[2000];
+extern pthread_mutex_t mutex[2000];
+void  do_work(int fd)
+{
+	char buff[4096] = {0};
+	DBG(BLUE"<R> : data is ready on %d.\n"NONE, fd);
+	int rsize = 0;
+	int ind = strlen(data[fd]);
 
+	if ( (rsize = recv(fd, buff, sizeof(buff), 0)) < 0) // recv是线程安全的
+	{
+		 if (errno != EAGAIN)
+		 {
+			epoll_ctl(sockfd, EPOLL_CTL_DEL, fd, NULL);
+			DBG(RED"<C> : %d is closed!.\nn"NONE, fd);
+			close(fd);
+		 }
+
+		return ;
+	}
+
+	pthread_mutex_lock(&mutex[fd]);
+	for (int i = 0; i < rsize; ++i)
+	{
+		if (buff[i] >= 'A' && buff[i] <= 'Z')
+		{
+			data[fd][ind++] = buff[i] + 32;
+		}
+		else if (buff[i] >= 'a' && buff[i] <= 'z')
+		{
+			data[fd][ind++] = buff[i] - 32;
+		}
+		else
+		{
+			data[fd][ind++] = buff[i];
+			if (buff[i] == '\n')
+			{
+				DBG(GREEN"<END> : \\n recved!.\n"NONE);
+				send(fd, data[fd], ind, 0);
+			}
+		}
+	}
+
+	pthread_mutex_unlock(&mutex[fd]);
+
+}
+
+
+void *worker(void *arg)
+{
+	pthread_detach(pthread_self());
+
+	struct task_queue *taskQueue = (struct task_queue *)arg;
+
+	while (1)
+	{
+		int *fd = (int *)task_queue_pop(taskQueue);
+		do_work(*fd);
+	}
+}

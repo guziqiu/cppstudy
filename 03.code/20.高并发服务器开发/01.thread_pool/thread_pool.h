@@ -25,4 +25,6 @@ void *task_queue_pop(struct task_queue *taskQueue);
 
 void *thread_run(void *arg); // 线程处理函数
 
+void *worker(void *arg);
+
 #endif
