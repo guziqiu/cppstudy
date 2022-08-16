@@ -26,6 +26,8 @@
 #include <ctype.h>
 #include <dirent.h>
 
+
+
 #include "01.color.h"
 #ifdef _D
 #define DBG(fmt, arg...) print(fmt, ##arg)
