@@ -59,6 +59,9 @@
 #include "server.h"
 #include <math.h>
 
+// Sorted Set 的实现代码 包括 Sorted Set 的各种操作实现
+
+
 /*-----------------------------------------------------------------------------
  * Skiplist implementation of the low level API
  *----------------------------------------------------------------------------*/
@@ -119,10 +122,14 @@ void zslFree(zskiplist *zsl) {
  * The return value of this function is between 1 and ZSKIPLIST_MAXLEVEL
  * (both inclusive), with a powerlaw-alike distribution where higher
  * levels are less likely to be returned. */
-int zslRandomLevel(void) {
-    int level = 1;
+int zslRandomLevel(void) { // 结点层数设置方法 ： 跳表结点层数是由 zslRandomLevel 函数决定
+    int level = 1; // 把层数初始化为 1，这也是结点的最小层数
+
+	// 如果随机数的值小于 ZSKIPLIST_P（指跳表结点增加层数的概率，值为 0.25），那么层数就增加 1 层
     while ((random()&0xFFFF) < (ZSKIPLIST_P * 0xFFFF))
         level += 1;
+
+	// 因为随机数取值到[0,0.25) 范围内的概率不超过 25%，所以这也就表明了，每增加一层的概率不超过 25%
     return (level<ZSKIPLIST_MAXLEVEL) ? level : ZSKIPLIST_MAXLEVEL;
 }
 
@@ -140,7 +147,7 @@ zskiplistNode *zslInsert(zskiplist *zsl, double score, sds ele) {
         /* store rank that is crossed to reach the insert position */
         rank[i] = i == (zsl->level-1) ? 0 : rank[i+1];
         while (x->level[i].forward &&
-                (x->level[i].forward->score < score ||
+                (x->level[i].forward->score < score || // 查找到的结点保存的元素权重，比要查找的权重小时
                     (x->level[i].forward->score == score &&
                     sdscmp(x->level[i].forward->ele,ele) < 0)))
         {
@@ -219,15 +226,19 @@ int zslDelete(zskiplist *zsl, double score, sds ele, zskiplistNode **node) {
     zskiplistNode *update[ZSKIPLIST_MAXLEVEL], *x;
     int i;
 
-    x = zsl->header;
-    for (i = zsl->level-1; i >= 0; i--) {
+    x = zsl->header; // 获取跳表的表头
+    for (i = zsl->level-1; i >= 0; i--) { // 从最大层数开始逐一遍历
         while (x->level[i].forward &&
-                (x->level[i].forward->score < score ||
-                    (x->level[i].forward->score == score &&
+                (x->level[i].forward->score < score || // 条件1. 查找到的结点保存的元素权重，比要查找的权重小
+                    (x->level[i].forward->score == score && 
+					// 条件2.查找到的结点保存的元素权重，等于要查找的权重时,
+					// 跳表会再检查该结点保存的 SDS 类型数据，结点数据小于要查找的数据
                      sdscmp(x->level[i].forward->ele,ele) < 0)))
         {
-            x = x->level[i].forward;
+            x = x->level[i].forward; // 继续访问该层上的下一个结点
         }
+		// 两个条件都不满足时，跳表就会用到当前查找到的结点的 level 数组了。
+		// 跳表会使用当前结点 level 数组里的下一层指针
         update[i] = x;
     }
     /* We may have multiple elements with the same score, what we need
@@ -1182,9 +1193,10 @@ void zsetConvert(robj *zobj, int encoding) {
         if (encoding != OBJ_ENCODING_SKIPLIST)
             serverPanic("Unknown target encoding");
 
+		// 创建一个 zset 
         zs = zmalloc(sizeof(*zs));
-        zs->dict = dictCreate(&zsetDictType,NULL);
-        zs->zsl = zslCreate();
+        zs->dict = dictCreate(&zsetDictType,NULL); // 调用 dictCreate 函数创建 zset 中的哈希表
+        zs->zsl = zslCreate(); // 调用 zslCreate 函数创建跳表
 
         eptr = ziplistIndex(zl,0);
         serverAssertWithInfo(NULL,zobj,eptr != NULL);
@@ -1311,6 +1323,8 @@ int zsetScore(robj *zobj, sds member, double *score) {
  *
  * The function does not take ownership of the 'ele' SDS string, but copies
  * it if needed. */
+// zadd key [nx|xx] [ch] [incr] score member [score member ...]
+// 
 int zsetAdd(robj *zobj, double score, sds ele, int *flags, double *newscore) {
     /* Turn options into simple to check vars. */
     int incr = (*flags & ZADD_INCR) != 0;
@@ -1326,6 +1340,7 @@ int zsetAdd(robj *zobj, double score, sds ele, int *flags, double *newscore) {
     }
 
     /* Update the sorted set according to its encoding. */
+	// 判定 Sorted Set 采用的是 ziplist 还是 skiplist 的编码方式
     if (zobj->encoding == OBJ_ENCODING_ZIPLIST) {
         unsigned char *eptr;
 
@@ -1367,22 +1382,24 @@ int zsetAdd(robj *zobj, double score, sds ele, int *flags, double *newscore) {
             *flags |= ZADD_NOP;
             return 1;
         }
-    } else if (zobj->encoding == OBJ_ENCODING_SKIPLIST) {
+    } else if (zobj->encoding == OBJ_ENCODING_SKIPLIST) { // skiplist 的编码方式
         zset *zs = zobj->ptr;
         zskiplistNode *znode;
         dictEntry *de;
 
-        de = dictFind(zs->dict,ele);
+        de = dictFind(zs->dict,ele); // 使用哈希表的 dictFind 函数，查找要插入的元素是否存在
         if (de != NULL) {
             /* NX? Return, same element already exists. */
             if (nx) {
                 *flags |= ZADD_NOP;
                 return 1;
             }
+			// 从哈希表中查询元素的权重
             curscore = *(double*)dictGetVal(de);
 
             /* Prepare the score for the increment if needed. */
-            if (incr) {
+            if (incr) { // 如果要增加元素的权重值。
+				//更新权重值
                 score += curscore;
                 if (isnan(score)) {
                     *flags |= ZADD_NAN;
@@ -1392,19 +1409,26 @@ int zsetAdd(robj *zobj, double score, sds ele, int *flags, double *newscore) {
             }
 
             /* Remove and re-insert when score changes. */
+			// 如果权重发生变化了
             if (score != curscore) {
+				// 如果权重值发生了变化，zsetAdd 函数就会调用 zslUpdateScore 函数，更新跳表中的元素权重值。
                 znode = zslUpdateScore(zs->zsl,curscore,ele,score);
                 /* Note that we did not removed the original element from
                  * the hash table representing the sorted set, so we just
                  * update the score. */
+				// 紧接着，zsetAdd 函数会把哈希表中该元素（对应哈希表中的 key）的 value 指向跳表结点中的权重值，
+				// 这样一来，哈希表中元素的权重值就可以保持最新值了。
                 dictGetVal(de) = &znode->score; /* Update score ptr. */
                 *flags |= ZADD_UPDATED;
             }
             return 1;
-        } else if (!xx) {
+        } else if (!xx) { // 如果新元素不存在
             ele = sdsdup(ele);
+			// 直接调用跳表元素插入函数 zslInsert 和哈希表元素插入函数 dictAdd，
             znode = zslInsert(zs->zsl,score,ele);
             serverAssert(dictAdd(zs->dict,ele,&znode->score) == DICT_OK);
+			// 没有把哈希表的操作嵌入到跳表本身的操作函数中，而是在 zsetAdd 函数中依次执行以上两个函数。
+			// 这样设计的好处是保持了跳表和哈希表两者操作的独立性。
             *flags |= ZADD_ADDED;
             if (newscore) *newscore = score;
             return 1;

@@ -807,26 +807,59 @@ struct sharedObjectsStruct {
     sds minstring, maxstring;
 };
 
+// 跳表结点的结构定义
 /* ZSETs use a specialized version of Skiplists */
+// zadd key [nx|xx] [ch] [incr] score member [score member ...]
 typedef struct zskiplistNode {
-    sds ele;
-    double score;
-    struct zskiplistNode *backward;
-    struct zskiplistLevel {
+// Sorted Set 中既要保存元素，也要保存元素的权重，所以对应到跳表结点的结构定义中，
+	// 就对应了 sds 类型的变量 ele，以及 double 类型的变量 score。
+    sds ele;  //Sorted Set中的元素 member
+    double score;  // 元素权重值
+    struct zskiplistNode *backward;  //后向指针
+    struct zskiplistLevel {  ////节点的level数组，保存每层上的前向指针和跨度
         struct zskiplistNode *forward;
+		// 为了便于从跳表的尾结点进行倒序查找，
+			// 每个跳表结点中还保存了一个后向指针（*backward），指向该结点的前一个结点。
         unsigned long span;
     } level[];
+	// 1.跳表是一个多层的有序链表，每一层也是由多个结点通过指针连接起来的。
+	// 因此在跳表结点的结构定义中，还包含了一个 zskiplistLevel 结构体类型的 level 数组
+	// 2.level 数组中的每一个元素对应了一个 zskiplistLevel 结构体，也对应了跳表的一层。
+	// 而 zskiplistLevel 结构体定义了一个指向下一结点的前向指针（*forward），
+	// 这就使得结点可以在某一层上和后续结点连接起来。
+	// 3.zskiplistLevel 结构体中还定义了跨度，这是用来记录结点在某一层上的*forward指针
+	// 和该指针指向的结点之间，跨越了 level0 上的几个结点。
+	// 4. 跳表中的结点都是按序排列的,对于跳表中的某个结点，我们可以把从头结点到该结点的查询路径上，
+	// 各个结点在所查询层次上的*forward指针跨度，做一个累加。
+	// 这个累加值就可以用来计算该结点在整个跳表中的顺序，
+	// 另外这个结构特点还可以用来实现 Sorted Set 的 rank 操作，比如 ZRANK、ZREVRANK 等。
 } zskiplistNode;
 
+// 跳表的定义
 typedef struct zskiplist {
-    struct zskiplistNode *header, *tail;
-    unsigned long length;
-    int level;
+    struct zskiplistNode *header, *tail; // 跳表的头结点和尾结点
+    unsigned long length; // 跳表的长度
+    int level; // 跳表的最大层数
+	// 跳表的每个结点都是通过指针连接起来的，所以我们在使用跳表时，
+	// 只需要从跳表结构体中获得头结点或尾结点，就可以通过结点指针访问到跳表中的各个结点。
+	// 当我们在 Sorted Set 中查找元素时，就对应到了 Redis 在跳表中查找结点,
+	// 而此时，查询代码可以使用跳表结点中的 level 数组来加速查询
+
+	// 调表的查询：
+	// 当查询一个结点时，跳表会先从头结点的最高层开始，查找下一个结点。
+	// 而由于跳表结点同时保存了元素和权重，所以跳表在比较结点时，相应地有两个判断条件：
+	// a.当查找到的结点保存的元素权重，比要查找的权重小时，跳表就会继续访问该层上的下一个结点。
+	// b.当查找到的结点保存的元素权重，等于要查找的权重时，跳表会再检查该结点保存的 SDS 类型数据，是否比要查找的 SDS 数据小。
+		// 如果结点数据小于要查找的数据时，跳表仍然会继续访问该层上的下一个结点。
+	// 但是，当上述两个条件都不满足时，跳表就会用到当前查找到的结点的 level 数组了。
+	// 跳表会使用当前结点 level 数组里的下一层指针，然后沿着下一层指针继续查找，
+	// 这就相当于跳到了下一层接着查找。
 } zskiplist;
 
+// 有序集合结构定义 sorted set
 typedef struct zset {
-    dict *dict;
-    zskiplist *zsl;
+    dict *dict;       // 哈希表
+    zskiplist *zsl;   // 跳表
 } zset;
 
 typedef struct clientBufferLimitsConfig {
