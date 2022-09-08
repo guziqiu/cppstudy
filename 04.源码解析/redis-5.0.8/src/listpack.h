@@ -43,7 +43,10 @@
 #define LP_BEFORE 0
 #define LP_AFTER 1
 #define LP_REPLACE 2
-
+// 在 listpack 中，因为每个列表项只记录自己的长度，
+// 而不会像 ziplist 中的列表项那样，会记录前一项的长度。
+// 所以，当我们在 listpack 中新增或修改元素时，实际上只会涉及每个列表项自己的操作，
+// 而不会影响后续列表项的长度变化，这就避免了连锁更新。
 unsigned char *lpNew(void);
 void lpFree(unsigned char *lp);
 unsigned char *lpInsert(unsigned char *lp, unsigned char *ele, uint32_t size, unsigned char *p, int where, unsigned char **newp);

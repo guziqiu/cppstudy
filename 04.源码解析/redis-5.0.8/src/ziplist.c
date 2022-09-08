@@ -587,6 +587,9 @@ unsigned char *ziplistNew(void) {
 
 /* Resize the ziplist. */
 unsigned char *ziplistResize(unsigned char *zl, unsigned int len) {
+	// 如果我们往 ziplist 频繁插入过多数据的话，
+	// 就可能引起多次内存分配，从而会对 Redis 性能造成影响。
+	// 对zl进行重新内存空间分配，重新分配的大小是len
     zl = zrealloc(zl,len);
     ZIPLIST_BYTES(zl) = intrev32ifbe(len);
     zl[len-1] = ZIP_END;
@@ -741,6 +744,8 @@ unsigned char *__ziplistDelete(unsigned char *zl, unsigned char *p, unsigned int
 
 /* Insert item at "p". */
 unsigned char *__ziplistInsert(unsigned char *zl, unsigned char *p, unsigned char *s, unsigned int slen) {
+	// 获取当前ziplist长度curlen；
+	// 声明reqlen变量，用来记录新插入元素所需的长度
     size_t curlen = intrev32ifbe(ZIPLIST_BYTES(zl)), reqlen;
     unsigned int prevlensize, prevlen = 0;
     size_t offset;
@@ -752,6 +757,10 @@ unsigned char *__ziplistInsert(unsigned char *zl, unsigned char *p, unsigned cha
     zlentry tail;
 
     /* Find out prevlen for the entry that is inserted. */
+	// 如果插入的位置不是ziplist末尾，则获取位于当前插入位置的元素的 prevlen(前一项长度) 和 prevlensize
+	// 在 ziplist 中，每一个元素都会记录其前一项的长度，也就是 prevlen。
+	// 然后，为了节省内存开销，ziplist 会使用不同的空间记录 prevlen，
+	// 这个 prevlen 空间大小就是 prevlensize。
     if (p[0] != ZIP_END) {
         ZIP_DECODE_PREVLEN(p, prevlensize, prevlen);
     } else {
@@ -762,24 +771,40 @@ unsigned char *__ziplistInsert(unsigned char *zl, unsigned char *p, unsigned cha
     }
 
     /* See if the entry can be encoded */
+	// 1.计算插入元素的长度
     if (zipTryEncoding(s,slen,&value,&encoding)) {
+		// 1.1 插入元素是整数，就按照不同的整数大小，计算 encoding 和实际数据 data 各自所需的空间；
         /* 'encoding' is set to the appropriate integer encoding */
         reqlen = zipIntSize(encoding);
     } else {
         /* 'encoding' is untouched, however zipStoreEntryEncoding will use the
          * string length to figure out how to encode it. */
         reqlen = slen;
+		// 1.2 如果是字符串，那么就先把字符串长度记录为所需的新增空间大小
     }
     /* We need space for both the length of the previous entry and
      * the length of the payload. */
+	// 2. 将插入位置元素的 prevlen 也计算到所需空间中。
+	// 这是因为在插入元素后，__ziplistInsert 函数可能要为插入位置的元素分配新增空间。
     reqlen += zipStorePrevEntryLength(NULL,prevlen);
+	// 3. 根据字符串的长度，计算相应 encoding 的大小。
+	// 在刚才的第一步中，对于字符串数据，只是记录了字符串本身的长度，
+	// 所以在第三步中，还会调用 zipStoreEntryEncoding 函数，
+	// 根据字符串的长度来计算相应的 encoding 大小
     reqlen += zipStoreEntryEncoding(NULL,encoding,slen);
+	// reqlen 变量中，记录了插入元素的 prevlen 长度、encoding 大小，以及实际数据 data 的长度。
+	// 插入元素的整体长度 = 插入元素的 prevlen 长度 + encoding 大小 + 实际数据 data 的长度
+	//  插入元素的整体长度 = 插入位置元素的 prevlen
 
     /* When the insert position is not equal to the tail, we need to
      * make sure that the next entry can hold this entry's length in
      * its prevlen field. */
     int forcelarge = 0;
+	// 判断插入位置元素的 prevlen 和实际所需的 prevlen 大小。
     nextdiff = (p[0] != ZIP_END) ? zipPrevLenByteDiff(p,reqlen) : 0;
+	// 如果 nextdiff 大于 0，就表明插入位置元素的空间不够，
+	//    需要新增 nextdiff 大小的空间，以便能保存新的 prevlen。
+
     if (nextdiff == -4 && reqlen < 4) {
         nextdiff = 0;
         forcelarge = 1;
@@ -787,7 +812,13 @@ unsigned char *__ziplistInsert(unsigned char *zl, unsigned char *p, unsigned cha
 
     /* Store offset because a realloc may change the address of zl. */
     offset = p-zl;
-    zl = ziplistResize(zl,curlen+reqlen+nextdiff);
+	// 新增空间, 来重新分配 ziplist 所需的空间。
+    zl = ziplistResize(zl,curlen+reqlen+nextdiff); 
+	// ziplistResize接收的参数分别是待重新分配的 ziplist 和重新分配的空间大小
+	// 而 __ziplistInsert 函数传入的重新分配大小的参数，是三个长度之和。
+	// 三个长度分别是 ziplist 现有大小（curlen）、
+	// 待插入元素自身所需的新增空间（reqlen），
+	// 以及插入位置元素 prevlen 所需的新增空间（nextdiff）
     p = zl+offset;
 
     /* Apply memory move when necessary and update tail offset. */
