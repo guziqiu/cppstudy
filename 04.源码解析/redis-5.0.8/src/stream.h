@@ -13,11 +13,12 @@ typedef struct streamID {
     uint64_t seq;       /* Sequence number. */
 } streamID;
 
+// Stream 结构体定义
 typedef struct stream {
-    rax *rax;               /* The radix tree holding the stream. */
-    uint64_t length;        /* Number of elements inside this stream. */
-    streamID last_id;       /* Zero if there are yet no items. */
-    rax *cgroups;           /* Consumer groups dictionary: name -> streamCG */
+    rax *rax;               /* The radix tree holding the stream. */ // 保存消息的Radix Tree
+    uint64_t length;        /* Number of elements inside this stream. */ // 消息流中的消息个数
+    streamID last_id;       /* Zero if there are yet no items. */ // 当前消息流中最后插入的消息的ID
+    rax *cgroups;           /* Consumer groups dictionary: name -> streamCG */ // 当前消息流的消费组信息，也是用Radix Tree保存
 } stream;
 
 /* We define an iterator to iterate stream items in an abstract way, without
