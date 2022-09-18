@@ -86,9 +86,13 @@ static inline char sdsReqType(size_t string_size) {
  * You can print the string with printf() as there is an implicit \0 at the
  * end of the string. However the string is binary safe and can contain
  * \0 characters in the middle, as the length is stored in the sds header. */
+// 在创建新的字符串时，Redis 会调用 SDS 创建函数 sdsnewlen
+// sdsnewlen 函数会新建 sds 类型变量（也就是 char* 类型变量），并新建 SDS 结构体，
+// 把 SDS 结构体中的数组 buf[] 赋给 sds 类型变量。
+// 最后，sdsnewlen 函数会把要创建的字符串拷贝给 sds 变量
 sds sdsnewlen(const void *init, size_t initlen) {
-    void *sh;
-    sds s;
+    void *sh; // 指向SDS结构体的指针
+    sds s; // sds类型变量，即char*字符数组
     char type = sdsReqType(initlen);
     /* Empty strings are usually created in order to append. Use type 8
      * since type 5 is not good at this. */
@@ -96,12 +100,13 @@ sds sdsnewlen(const void *init, size_t initlen) {
     int hdrlen = sdsHdrSize(type);
     unsigned char *fp; /* flags pointer. */
 
-    sh = s_malloc(hdrlen+initlen+1);
+    sh = s_malloc(hdrlen+initlen+1); // 新建SDS结构，并分配内存空间
     if (init==SDS_NOINIT)
         init = NULL;
     else if (!init)
         memset(sh, 0, hdrlen+initlen+1);
     if (sh == NULL) return NULL;
+	// sds类型变量指向SDS结构体中的buf数组，sh指向SDS结构体起始位置，hdrlen是SDS结构体中元数据的长度 
     s = (char*)sh+hdrlen;
     fp = ((unsigned char*)s)-1;
     switch(type) {
@@ -139,8 +144,8 @@ sds sdsnewlen(const void *init, size_t initlen) {
         }
     }
     if (initlen && init)
-        memcpy(s, init, initlen);
-    s[initlen] = '\0';
+        memcpy(s, init, initlen); // 将要传入的字符串拷贝给sds变量s
+    s[initlen] = '\0'; // 变量s末尾增加\0，表示字符串结束
     return s;
 }
 

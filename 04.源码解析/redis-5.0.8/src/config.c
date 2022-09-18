@@ -202,13 +202,18 @@ void loadServerConfigFromString(char *config) {
         sdstolower(argv[0]);
 
         /* Execute config directives */
+		// 参数名匹配，检查参数是否为“timeout“
         if (!strcasecmp(argv[0],"timeout") && argc == 2) {
             server.maxidletime = atoi(argv[1]);
+			// 检查参数值是否小于0，小于0则报错
             if (server.maxidletime < 0) {
                 err = "Invalid timeout value"; goto loaderr;
             }
+			// 参数名匹配，检查参数是否为“tcp-keepalive“//参数名匹配，检查参数是否为“tcp-keepalive“
         } else if (!strcasecmp(argv[0],"tcp-keepalive") && argc == 2) {
+			// 设置server的tcpkeepalive参数
             server.tcpkeepalive = atoi(argv[1]);
+			// 检查参数值是否小于0，小于0则报错
             if (server.tcpkeepalive < 0) {
                 err = "Invalid tcp-keepalive value"; goto loaderr;
             }
@@ -831,6 +836,7 @@ loaderr:
  * Both filename and options can be NULL, in such a case are considered
  * empty. This way loadServerConfig can be used to just load a file or
  * just load a string. */
+// 会把解析后的命令行参数，追加到配置文件形成的配置项字符串。
 void loadServerConfig(char *filename, char *options) {
     sds config = sdsempty();
     char buf[CONFIG_MAX_LINE+1];
@@ -857,7 +863,7 @@ void loadServerConfig(char *filename, char *options) {
         config = sdscat(config,"\n");
         config = sdscat(config,options);
     }
-    loadServerConfigFromString(config);
+    loadServerConfigFromString(config); // 对配置项字符串中的每一个配置项进行匹配,一旦匹配成功，就会按照配置项的值设置 server 的参数。
     sdsfree(config);
 }
 
