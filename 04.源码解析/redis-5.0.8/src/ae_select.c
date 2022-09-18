@@ -32,6 +32,8 @@
 #include <sys/select.h>
 #include <string.h>
 
+// 对应 Linux（或 Windows）的 IO 复用函数 select
+
 typedef struct aeApiState {
     fd_set rfds, wfds;
     /* We need to have a copy of the fd sets as it's not safe to reuse
@@ -74,6 +76,7 @@ static void aeApiDelEvent(aeEventLoop *eventLoop, int fd, int mask) {
     if (mask & AE_WRITABLE) FD_CLR(fd,&state->wfds);
 }
 
+// 依赖于操作系统底层提供的 IO 多路复用机制，来实现事件捕获, 检查是否有新的连接、读写事件发生
 static int aeApiPoll(aeEventLoop *eventLoop, struct timeval *tvp) {
     aeApiState *state = eventLoop->apidata;
     int retval, j, numevents = 0;

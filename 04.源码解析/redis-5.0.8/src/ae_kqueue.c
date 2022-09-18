@@ -32,7 +32,7 @@
 #include <sys/types.h>
 #include <sys/event.h>
 #include <sys/time.h>
-
+// 对应 macOS 或 FreeBSD 上的 IO 复用函数 kqueue；
 typedef struct aeApiState {
     int kqfd;
     struct kevent *events;

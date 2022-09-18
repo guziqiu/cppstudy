@@ -69,10 +69,10 @@ typedef void aeBeforeSleepProc(struct aeEventLoop *eventLoop);
 
 /* File event structure */
 typedef struct aeFileEvent {
-    int mask; /* one of AE_(READABLE|WRITABLE|BARRIER) */
-    aeFileProc *rfileProc;
-    aeFileProc *wfileProc;
-    void *clientData;
+    int mask; /* one of AE_(READABLE|WRITABLE|BARRIER) */ // 事件类型的掩码
+    aeFileProc *rfileProc; // 指向 AE_READABLE 事件的处理函数  也就是 Reactor 模型中的 handler
+    aeFileProc *wfileProc; // 指向 AE_WRITABLE 事件的处理函数  也就是 Reactor 模型中的 handler
+    void *clientData; // 指向客户端私有数据的指针
 } aeFileEvent;
 
 /* Time event structure */
@@ -99,13 +99,13 @@ typedef struct aeEventLoop {
     int setsize; /* max number of file descriptors tracked */
     long long timeEventNextId;
     time_t lastTime;     /* Used to detect system clock skew */
-    aeFileEvent *events; /* Registered events */
-    aeFiredEvent *fired; /* Fired events */
-    aeTimeEvent *timeEventHead;
+    aeFileEvent *events; /* Registered events */ // IO事件数组
+    aeFiredEvent *fired; /* Fired events */ //已触发事件数组
+    aeTimeEvent *timeEventHead; // //记录时间事件的链表头, 表示时间事件，即按一定时间周期触发的事件。
     int stop;
-    void *apidata; /* This is used for polling API specific data */
-    aeBeforeSleepProc *beforesleep;
-    aeBeforeSleepProc *aftersleep;
+    void *apidata; /* This is used for polling API specific data */ //和API调用接口相关的数据
+    aeBeforeSleepProc *beforesleep; //进入事件循环流程前执行的函数
+    aeBeforeSleepProc *aftersleep; // 退出事件循环流程后执行的函数
 } aeEventLoop;
 
 /* Prototypes */

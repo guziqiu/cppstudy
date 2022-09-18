@@ -38,6 +38,8 @@
 
 #include <stdio.h>
 
+// 对应 Solaris 上的 IO 复用函数 evport；
+
 static int evport_debug = 0;
 
 /*
