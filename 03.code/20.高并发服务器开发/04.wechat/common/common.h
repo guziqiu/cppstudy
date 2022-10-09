@@ -12,5 +12,4 @@ char *get_conf_val(const char *file, const char *key);
 
 // char ans[512];
 
-
 #endif

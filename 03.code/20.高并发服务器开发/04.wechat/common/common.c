@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include "head.h"
-#include "common.h"
+// #include "common.h"
+
+const char *config = "../wechatd.conf";
+struct wechat_user *users;
 
 char ans[512];
 

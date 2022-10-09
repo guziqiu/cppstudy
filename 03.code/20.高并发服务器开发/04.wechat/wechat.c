@@ -1,4 +1,3 @@
-#include "wechat.h"
 #include "head.h"
 
 extern struct wechat_user *users;
@@ -37,14 +36,14 @@ void *sub_reactor(void *arg)
                         struct wechat_msg msg;
                         bzero(&msg, sizeof(msg));
                         int ret = recv (fd, (void *)&msg, sizeof(msg), 0);
-                        // if (ret <= 0 ) // && EAGAIN != errno)
-                        // {
-                        //         close(fd);
-                        //         epoll_ctl(subfd, EPOLL_CTL_DEL, fd, NULL);
-                        //         users[fd].isOnline = 0;
-                        //         DBG("connection of %d on %d is closed.\n", fd, subds);
-                        //         continue;
-                        // }
+                        if (ret <= 0 ) // && EAGAIN != errno)
+                        {
+                                close(fd);
+                                epoll_ctl(subfd, EPOLL_CTL_DEL, fd, NULL);
+                                users[fd].isOnline = 0;
+                                DBG("connection of %d on %d is closed.\n", fd, subfd);
+                                continue;
+                        }
 
                         if (ret != sizeof(msg))
                         {
@@ -55,13 +54,14 @@ void *sub_reactor(void *arg)
                         if (msg.type & WECHAT_WALL)
                         {
                                 DBG("%s : %s \n", msg.from, msg.msg);
-                                send_all(&msg, );
+                                send_all(&msg);
                         }
                         else
                         {
                                 DBG("err msg type %d.\n", msg.type);
                         }
                 }
+
 			sleep(30);
         }
 }

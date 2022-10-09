@@ -1,8 +1,7 @@
 #include "head.h"
-#include "common.h"
-#include "wechat.h"
 
-const char *config = "../wechatd.conf";
+extern struct wechat_user *users;
+extern const char *config;
 
 int main(int argc, char **argv)
 {
@@ -151,6 +150,6 @@ int main(int argc, char **argv)
 
 
 
-	// gcc client.c -I ../ ../common.c ../wechat.c -D _D -lpthread
+	// gcc client.c -std=c99 -I ../common -I ../ ../common/common.c ../wechat.c -D _D -lpthread -o client
 	return 0;
 }
