@@ -2,7 +2,6 @@
 #define _USERINFO_H
 
 #include <string.h>
-
 #include "common/macro.h"
 
 
