@@ -147,7 +147,7 @@ int main(int argc, char **argv)
 					// 从反应堆
 					msg.type = WECHAT_ACK;
 					send(fd, (void *)&msg, sizeof(msg), 0);
-					strcpy(msg.msg, "login sucess!\n");
+					strcpy(msg.msg, "login sucess 登录成功!\n");
 					show_msg(&msg);
 					strcpy(users[fd].name, msg.from);
 					users[fd].fd = fd;

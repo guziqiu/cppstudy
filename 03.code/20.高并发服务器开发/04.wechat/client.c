@@ -3,6 +3,8 @@
 extern struct wechat_user *users;
 extern const char *config;
 
+WINDOW *msg_win, *sub_msg_win, *info_win, *sub_info_win, *input_win, *sub_input_win;
+
 int main(int argc, char **argv)
 {
 
@@ -13,27 +15,27 @@ int main(int argc, char **argv)
 	char name[50] = {0};
 
 	int mode = 0;
-	while ( ( opt = getopt(argc, argv, "p:h:s:n:m:") ) != -1 )
+	while ((opt = getopt(argc, argv, "p:h:s:n:m:")) != -1)
 	{
 		switch (opt)
 		{
-			case 'p':
-				server_port = atoi(optarg);
-				break;
-			case 'h':
-				strcpy(server_ip, optarg);
-				break;
-			case 'n':
-				strcpy(name, optarg);
-				break;
-			case 'm':
-				mode = atoi(optarg);
-			case 's':
-				sex = atoi(optarg);
-				break;
-			default:
-				fprintf(stderr, "Usage : %s -p port -n name -s sex -h server_ip.\n", argv[0]);
-				exit(-1);
+		case 'p':
+			server_port = atoi(optarg);
+			break;
+		case 'h':
+			strcpy(server_ip, optarg);
+			break;
+		case 'n':
+			strcpy(name, optarg);
+			break;
+		case 'm':
+			mode = atoi(optarg);
+		case 's':
+			sex = atoi(optarg);
+			break;
+		default:
+			fprintf(stderr, "Usage : %s -p port -n name -s sex -h server_ip.\n", argv[0]);
+			exit(-1);
 		}
 	}
 
@@ -66,15 +68,19 @@ int main(int argc, char **argv)
 	DBG("server_ip: %s \n server_port: %d \n name: %s.\n", server_ip, server_port, name);
 	DBG("read config sucess.\n");
 
+#ifdef UI
+	setlocale(LC_ALL, "");
+	init_ui();
+#endif
+
 	int sockfd;
-	if ( (sockfd = socket_connect(server_ip, server_port)) < 0 )
+	if ((sockfd = socket_connect(server_ip, server_port)) < 0)
 	{
 		perror("sock_connect");
 		exit(-1);
 	}
 
 	DBG("connect to server %s:%d -> <%d> successfully\n", server_ip, server_port, sockfd);
-
 
 	struct wechat_msg msg;
 	bzero(&msg, sizeof(msg));
@@ -99,7 +105,7 @@ int main(int argc, char **argv)
 	struct timeval tv;
 	tv.tv_sec = 2;
 	tv.tv_usec = 0;
-	if (select (sockfd + 1, &rfds, NULL, NULL, &tv) <= 0)
+	if (select(sockfd + 1, &rfds, NULL, NULL, &tv) <= 0)
 	{
 		fprintf(stderr, "server is out of service\n");
 		exit(-1);
@@ -136,19 +142,21 @@ int main(int argc, char **argv)
 
 	while (1)
 	{
-		printf("please Input:\n");
-		char buff[1024] = {0};
-		scanf("%[^\n]", buff);
-		getchar();
-		if (strlen(buff)) continue;
-		msg.type = WECHAT_WALL; // 公有消息
-		strcpy(msg.msg, buff);
+		bzero(&msg, sizeof(msg.msg));
+		echo();
+		nocbreak();
+		mvwscanw(input_win, 2, 1, "%[^\n]", msg.msg);
+		msg.type = WECHAT_WALL;
+		if (!strlen(msg.msg))
+		{
+			continue;
+		}
 		send(sockfd, (void *)&msg, sizeof(msg), 0);
+		wclear(input_win);
+		box(input_win, 0, 0);
+		noecho();
+		cbreak();
 	}
-
-
-
-
 
 	// gcc client.c -std=c99 -I ../common -I ../ ../common/common.c ../wechat.c -D _D -lpthread -o client
 	return 0;

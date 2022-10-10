@@ -1,12 +1,12 @@
 all:server client
 
-OBJS:= ./common -I ./  ./common/common.c ./wechat.c 
+OBJS:= ./common -I ./  ./common/common.c ./wechat.c -I ./common ./common/wechat_ui.c -D UI
 
 client:
-	gcc ./client.c -std=c99 -I $(OBJS) -lpthread -o client
+	gcc ./client.c -std=c99 -I $(OBJS) -lpthread -lncursesw -o client
 
 server:
-	gcc ./server.c -std=c99 -I $(OBJS) -I ./common ./common/wechat_ui.c -D UI -lpthread -lncurses -o server
+	gcc ./server.c -std=c99 -I $(OBJS) -lpthread -lncursesw -o server
 
 debug:
 	gcc ./client.c -std=c99 -I $(OBJS) -D _D -lpthread -o client

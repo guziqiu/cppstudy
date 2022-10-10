@@ -53,6 +53,7 @@ void *sub_reactor(void *arg)
 
                         if (msg.type & WECHAT_WALL)
                         {
+                                show_msg(&msg);
                                 DBG("%s : %s \n", msg.from, msg.msg);
                                 send_all(&msg);
                         }
