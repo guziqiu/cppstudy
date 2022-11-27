@@ -100,6 +100,16 @@ void init_ui()
 }
 
 // void show_msg(struct wechat_msg *msg);
+void show_msg2(char *str)
+{
+	struct wechat_msg msg;
+	// msg.type = WECHAT_MSG;
+	bzero(msg);
+	strcpy(msg.msg, str);
+	show_msg(&msg);
+}
+
+
 void show_msg(struct wechat_msg *msg)
 {
 	time_t time_now = time(NULL);

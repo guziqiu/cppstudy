@@ -4,7 +4,7 @@ extern struct wechat_user *users;
 extern const char *config;
 
 WINDOW *msg_win, *sub_msg_win, *info_win, *sub_info_win, *input_win, *sub_input_win;
-
+// gcc ./client.c -std=c99 -I ./common -I ./  ./common/common.c ./wechat.c -I ./common ./common/wechat_ui.c -D UI -lpthread -lncursesw -o client
 int main(int argc, char **argv)
 {
 
@@ -142,7 +142,7 @@ int main(int argc, char **argv)
 
 	while (1)
 	{
-		bzero(&msg, sizeof(msg.msg));
+		bzero(&msg.msg, sizeof(msg.msg));
 		echo();
 		nocbreak();
 		mvwscanw(input_win, 2, 1, "%[^\n]", msg.msg);
@@ -151,7 +151,11 @@ int main(int argc, char **argv)
 		{
 			continue;
 		}
+		show_msg2("send before");
 		send(sockfd, (void *)&msg, sizeof(msg), 0);
+		show_msg2("send after");
+		// show_msg(msg);
+
 		wclear(input_win);
 		box(input_win, 0, 0);
 		noecho();

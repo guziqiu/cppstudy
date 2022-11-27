@@ -16,7 +16,7 @@
 #include <sys/sem.h>
 #include <sys/ioctl.h>
 #include <sys/select.h>
-#include <bits/types/struct_timeval.h>
+//#include <bits/types/struct_timeval.h>
 
 #include <stdio.h>
 #include <stdlib.h>

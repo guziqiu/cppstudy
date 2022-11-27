@@ -3,7 +3,7 @@
 
 extern struct wechat_user *users;
 extern const char *config;
-
+// gcc ./server.c -std=c99 -I ./common -I ./  ./common/common.c ./wechat.c -I ./common ./common/wechat_ui.c -D _D -lpthread -lncursesw -o server
 WINDOW *msg_win, *sub_msg_win, *info_win, *sub_info_win, *input_win, *sub_input_win;
 
 int main(int argc, char **argv)
@@ -78,7 +78,7 @@ int main(int argc, char **argv)
 	pthread_t tid1, tid2;
 	DBG("Two sub reactor threads created\n");
 	pthread_create(&tid1, NULL, sub_reactor, (void *)&subefd1);
-	pthread_create(&tid1, NULL, sub_reactor, (void *)&subefd2);
+	pthread_create(&tid2, NULL, sub_reactor, (void *)&subefd2);
 
 	struct epoll_event events[MAXEVENTS];
 	struct epoll_event ev;
@@ -99,6 +99,7 @@ int main(int argc, char **argv)
 			exit(-1);
 		}
 
+		printf("nfds:%d\n", nfds);
 		for (int i = 0; i < nfds; ++i)
 		{
 			int fd = events[i].data.fd;
@@ -145,9 +146,11 @@ int main(int argc, char **argv)
 				{
 					// 登录 判断密码是否正确，验证用户是否重复登录
 					// 从反应堆
+					wclear(sub_input_win);
 					msg.type = WECHAT_ACK;
 					send(fd, (void *)&msg, sizeof(msg), 0);
 					strcpy(msg.msg, "login sucess 登录成功!\n");
+
 					show_msg(&msg);
 					strcpy(users[fd].name, msg.from);
 					users[fd].fd = fd;
@@ -155,15 +158,16 @@ int main(int argc, char **argv)
 					users[fd].sex = msg.sex;
 
 					int which = msg.sex == 1 ? subefd1 : subefd2;
+					epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, NULL); // 从反应堆添加文件描述符时，将文件描述符从主反应堆删除
 					add_to_reactor(which, fd);
 				}
-				else if (msg.type & WECHAT_SIGNOUT)
-				{
-				}
-				else
-				{
-					// 报文数据有误
-				}
+				// else if (msg.type & WECHAT_SIGNOUT)
+				// {
+				// }
+				// else
+				// {
+				// 	// 报文数据有误
+				// }
 			}
 		}
 	}
