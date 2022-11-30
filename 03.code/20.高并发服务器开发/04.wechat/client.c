@@ -151,9 +151,9 @@ int main(int argc, char **argv)
 		{
 			continue;
 		}
-		show_msg2("send before");
+		// show_msg2("send before");
 		send(sockfd, (void *)&msg, sizeof(msg), 0);
-		show_msg2("send after");
+		// show_msg2("send after");
 		// show_msg(msg);
 
 		wclear(input_win);

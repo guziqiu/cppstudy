@@ -78,7 +78,7 @@ void *sub_reactor(void *arg)
 			}
 		}
 
-		sleep(30);
+		sleep(1);
 	}
 }
 
