@@ -37,7 +37,11 @@ struct wechat_msg
 void *client_recv(void *arg);
 
 
+void setfd(int epollfd, int subefd1, int subefd2);
+
 void *sub_reactor(void *arg);
+void heart_beat(int signum);
+// void heart_beat(int signum, int epollfd, int subefd1, int subefd2);
 
 int add_to_reactor(int epollfd, int fd);
 

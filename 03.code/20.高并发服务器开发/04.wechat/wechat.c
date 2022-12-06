@@ -1,6 +1,37 @@
 #include "head.h"
 
 extern struct wechat_user *users;
+int *s_epollfd, *s_subefd1, *s_subefd2;
+void setfd(int epollfd, int subefd1, int subefd2)
+{
+	s_epollfd = &epollfd;
+	s_subefd1 = &subefd1;
+	s_subefd2 = &subefd2;
+}
+
+
+void heart_beat(int signum)
+{
+	struct wechat_msg msg;
+	msg.type = WECHAT_HEART;
+	
+	DBG(GREEN"SIGALRM\n"NONE);
+	for (int i = 0; i < MAXUSERS; ++i)
+	{
+		if (users[i].isOnline)
+		{
+			send(users[i].fd, (void *)&msg, sizeof(struct wechat_msg), 0);
+			--users[i].isOnline;
+			if (users[i].isOnline == 0)
+			{
+				int tmp_fd = users[i].sex ? *s_subefd1 : *s_subefd2;
+				epoll_ctl(tmp_fd, EPOLL_CTL_DEL, users[i].fd, NULL);
+				close(users[i].fd);
+				DBG(RED"<heart beat err>"NONE"%s is removed because if heart beat error\n", users[i].name);
+			}
+		}
+	}
+}
 
 void send_all(struct wechat_msg *msg)
 {
@@ -38,7 +69,12 @@ void *sub_reactor(void *arg)
 	for (;;)
 	{
 		DBG("in subactor loop start\n");
-		int nfds = epoll_wait(subfd, events, MAXEVENTS, -1);
+
+		sigset_t sigset;
+		sigemptyset(&sigset);
+		sigaddset(&sigset, SIGALRM);
+	
+		int nfds = epoll_pwait(subfd, events, MAXEVENTS, -1, &sigset);
 		if (nfds < 0)
 		{
 			DBG("sub reactor fd error, nfds=%d.\n", nfds);
@@ -66,11 +102,16 @@ void *sub_reactor(void *arg)
 				continue;
 			}
 
+			users[fd].isOnline = 5;
 			if (msg.type & WECHAT_WALL)
 			{
 				show_msg(&msg);
 				DBG("%s : %s \n", msg.from, msg.msg);
 				send_all(&msg);
+			}
+			else if (msg.type & WECHAT_HEART && msg.type & WECHAT_ACK)
+			{
+				DBG(RED"ack for ❤ \n"NONE);
 			}
 			else
 			{
@@ -112,6 +153,18 @@ void *client_recv(void *arg)
 			perror("recv");
 			exit(1);
 		}
-		show_msg(&msg);
+		if (msg.type & WECHAT_HEART)
+		{
+			strcpy(msg.msg, "--> ❤");
+			show_msg(&msg);
+
+			struct wechat_msg ack;
+			ack.type = WECHAT_ACK | WECHAT_HEART; // 表明是对心跳包的确认
+			send(sockfd, (void *)&ack, sizeof(ack), 0);
+		}
+		else
+		{
+			show_msg(&msg);
+		}
 	}
 }

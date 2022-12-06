@@ -53,6 +53,16 @@ int main(int argc, char **argv)
 
 	DBG("server_listen is listening on port : %d\n", port);
 
+	struct itimerval itv;
+	itv.it_interval.tv_sec = 2;
+	itv.it_interval.tv_usec = 0;
+	itv.it_value.tv_sec = 1;
+	itv.it_value.tv_usec = 0;
+	setitimer(ITIMER_REAL, &itv, NULL);
+	signal(SIGALRM, heart_beat);
+
+	// sleep(20); 
+
 	users = (struct wechat_user *)calloc(MAXUSERS, sizeof(struct wechat_user));
 
 	if ((epollfd = epoll_create(1)) < 0) // 主反应堆
@@ -73,12 +83,15 @@ int main(int argc, char **argv)
 		exit(-1);
 	}
 
+	setfd(epollfd, subefd1, subefd2);
+
 	DBG("main reactor and two sub reactors created.\n");
 
-	pthread_t tid1, tid2;
+	pthread_t tid1, tid2, heart_tid;
 	DBG("Two sub reactor threads created\n");
 	pthread_create(&tid1, NULL, sub_reactor, (void *)&subefd1);
 	pthread_create(&tid2, NULL, sub_reactor, (void *)&subefd2);
+	pthread_create(&heart_tid, NULL, heart_beat, NULL);
 
 	struct epoll_event events[MAXEVENTS];
 	struct epoll_event ev;
@@ -90,8 +103,12 @@ int main(int argc, char **argv)
 
 	for (;;)
 	{
+		sigset_t sigset;
+		sigemptyset(&sigset);
+		sigaddset(&sigset, SIGALRM);
+
 		// 判断文件描述符是否就绪
-		int nfds = epoll_wait(epollfd, events, MAXEVENTS, -1);
+		int nfds = epoll_pwait(epollfd, events, MAXEVENTS, -1, &sigset);
 
 		if (nfds < 0)
 		{
@@ -154,7 +171,7 @@ int main(int argc, char **argv)
 					show_msg(&msg);
 					strcpy(users[fd].name, msg.from);
 					users[fd].fd = fd;
-					users[fd].isOnline = 1;
+					users[fd].isOnline = 5;
 					users[fd].sex = msg.sex;
 
 					int which = msg.sex == 1 ? subefd1 : subefd2;

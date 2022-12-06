@@ -29,6 +29,9 @@
 
 #include <getopt.h>
 
+#include <sys/time.h>
+#include <signal.h>
+
 // ui
 #include <ncurses.h>
 #include <locale.h>
